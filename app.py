@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 
 from rdkit import Chem
@@ -29,7 +27,7 @@ st.set_page_config(
 )
 
 # ------------------------------------------------
-# MODERN CSS
+# CUSTOM CSS
 # ------------------------------------------------
 
 st.markdown("""
@@ -44,83 +42,39 @@ st.markdown("""
     color: white;
 }
 
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-
-/* TITLE */
-
 .title {
-
     text-align: center;
-
-    font-size: 55px;
-
+    font-size: 50px;
     font-weight: bold;
-
     background: linear-gradient(
         90deg,
         #3b82f6,
         #8b5cf6
     );
-
     -webkit-background-clip: text;
-
     -webkit-text-fill-color: transparent;
-
-    margin-bottom: 10px;
 }
 
 .subtitle {
-
     text-align: center;
-
     color: #cbd5e1;
-
-    font-size: 22px;
-
-    margin-bottom: 40px;
+    font-size: 20px;
+    margin-bottom: 30px;
 }
 
-/* BUTTON */
-
 .stButton>button {
-
     background: linear-gradient(
         90deg,
         #3b82f6,
         #8b5cf6
     );
-
     color: white;
-
     border: none;
-
-    padding: 15px;
-
-    border-radius: 12px;
-
+    border-radius: 10px;
+    padding: 12px;
     width: 100%;
-
     font-size: 18px;
-
     font-weight: bold;
-}
-
-/* INPUT */
-
-.stTextInput>div>div>input {
-
-    background-color: #1e293b;
-
-    color: white;
-
-    border-radius: 12px;
-
-    padding: 14px;
-
-    border: 1px solid rgba(255,255,255,0.1);
 }
 
 </style>
@@ -131,13 +85,21 @@ st.markdown("""
 # ------------------------------------------------
 
 active_smiles = [
-    "CCO","CCC","CCBr",
-    "CC(C)O","CCCC","CCCO"
+    "CCO",
+    "CCC",
+    "CCBr",
+    "CC(C)O",
+    "CCCC",
+    "CCCO"
 ]
 
 inactive_smiles = [
-    "CCN","CCCl","CC(C)N",
-    "CC(C)Cl","CCCCN","CCCN"
+    "CCN",
+    "CCCl",
+    "CC(C)N",
+    "CC(C)Cl",
+    "CCCCN",
+    "CCCN"
 ]
 
 toxic_smiles = [
@@ -151,7 +113,8 @@ smiles_list = []
 activity_list = []
 toxicity_list = []
 
-# Active molecules
+# ACTIVE MOLECULES
+
 for i in range(250):
 
     mol = random.choice(active_smiles)
@@ -165,7 +128,8 @@ for i in range(250):
     else:
         toxicity_list.append(0)
 
-# Inactive molecules
+# INACTIVE MOLECULES
+
 for i in range(250):
 
     mol = random.choice(inactive_smiles)
@@ -178,6 +142,8 @@ for i in range(250):
         toxicity_list.append(1)
     else:
         toxicity_list.append(0)
+
+# DATAFRAME
 
 df = pd.DataFrame({
     "smiles": smiles_list,
@@ -202,8 +168,19 @@ def extract_features(smiles):
         Descriptors.NumHAcceptors(mol),
         Descriptors.TPSA(mol)
     ]
+
+# FEATURES
+
+X = df["smiles"].apply(
+    extract_features
+).tolist()
+
+y_activity = df["activity"]
+
+y_toxicity = df["toxicity"]
+
 # ------------------------------------------------
-# TRAIN MODELS
+# MACHINE LEARNING MODELS
 # ------------------------------------------------
 
 activity_model = RandomForestClassifier(
@@ -216,63 +193,24 @@ toxicity_model = RandomForestClassifier(
     random_state=42
 )
 
-activity_model.fit(X, y_activity)
+activity_model.fit(
+    X,
+    y_activity
+)
 
-toxicity_model.fit(X, y_toxicity)
-
-# ------------------------------------------------
-# 3D MOLECULE VIEWER
-# ------------------------------------------------
-
-def show_molecule(smiles):
-
-    mol = Chem.MolFromSmiles(smiles)
-    
-
-    if mol is None:
-        st.error("Invalid SMILES molecule")
-        st.stop()
-
-    mol = Chem.AddHs(mol)
-
-    AllChem.EmbedMolecule(mol)
-
-    AllChem.MMFFOptimizeMolecule(mol)
-
-    mol_block = Chem.MolToMolBlock(mol)
-
-    viewer = py3Dmol.view(
-        width=700,
-        height=500
-    )
-
-    viewer.addModel(
-        mol_block,
-        "mol"
-    )
-
-    viewer.setStyle({
-        "stick": {},
-        "sphere": {
-            "scale": 0.25
-        }
-    })
-
-    viewer.setBackgroundColor("black")
-
-    viewer.zoomTo()
-
-    return viewer._make_html()
+toxicity_model.fit(
+    X,
+    y_toxicity
+)
 
 # ------------------------------------------------
-# DRUG LIKENESS
+# LIPINSKI RULE
 # ------------------------------------------------
 
 def lipinski(smiles):
 
     mol = Chem.MolFromSmiles(smiles)
 
-    # CHECK INVALID INPUT
     if mol is None:
         return "INVALID", 0
 
@@ -337,6 +275,48 @@ def fetch_pubchem_data(smiles):
         return None
 
 # ------------------------------------------------
+# 3D VISUALIZATION
+# ------------------------------------------------
+
+def show_molecule(smiles):
+
+    mol = Chem.MolFromSmiles(smiles)
+
+    if mol is None:
+        return None
+
+    mol = Chem.AddHs(mol)
+
+    AllChem.EmbedMolecule(mol)
+
+    AllChem.MMFFOptimizeMolecule(mol)
+
+    mol_block = Chem.MolToMolBlock(mol)
+
+    viewer = py3Dmol.view(
+        width=700,
+        height=500
+    )
+
+    viewer.addModel(
+        mol_block,
+        "mol"
+    )
+
+    viewer.setStyle({
+        "stick": {},
+        "sphere": {
+            "scale": 0.25
+        }
+    })
+
+    viewer.setBackgroundColor("black")
+
+    viewer.zoomTo()
+
+    return viewer._make_html()
+
+# ------------------------------------------------
 # PDF REPORT
 # ------------------------------------------------
 
@@ -353,7 +333,6 @@ def create_pdf(
 
     pdf.add_page()
 
-    # TITLE
     pdf.set_font(
         "Arial",
         "B",
@@ -370,19 +349,10 @@ def create_pdf(
 
     pdf.ln(10)
 
-    # CONTENT
     pdf.set_font(
         "Arial",
         "",
         14
-    )
-
-    clean_toxicity = toxicity.replace(
-        "🔴",
-        ""
-    ).replace(
-        "🟢",
-        ""
     )
 
     pdf.cell(
@@ -409,7 +379,7 @@ def create_pdf(
     pdf.cell(
         200,
         10,
-        txt=f"Toxicity: {clean_toxicity}",
+        txt=f"Toxicity: {toxicity}",
         ln=True
     )
 
@@ -422,7 +392,6 @@ def create_pdf(
 
     pdf.ln(10)
 
-    # MOLECULAR INFO
     pdf.set_font(
         "Arial",
         "B",
@@ -485,196 +454,219 @@ predict = st.button(
 
 if predict:
 
-    features = extract_features(smiles)
-
-    prediction = activity_model.predict(
-        [features]
-    )[0]
-
-    probability = activity_model.predict_proba(
-        [features]
-    )[0][1]
-
-    toxicity = toxicity_model.predict(
-        [features]
-    )[0]
-
-    drug_like, violations = lipinski(smiles)
-
-    if prediction == 1:
-        prediction_label = "ACTIVE"
-    else:
-        prediction_label = "INACTIVE"
-
-    if toxicity == 1:
-        toxicity_label = "HIGH"
-    else:
-        toxicity_label = "LOW"
-
-    # ------------------------------------------------
-    # METRICS
-    # ------------------------------------------------
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric(
-            "Prediction",
-            prediction_label
-        )
-
-    with col2:
-        st.metric(
-            "Confidence",
-            f"{probability:.2f}"
-        )
-
-    with col3:
-        st.metric(
-            "Toxicity",
-            toxicity_label
-        )
-
-    with col4:
-        st.metric(
-            "Drug-Likeness",
-            drug_like
-        )
-
-    # ------------------------------------------------
-    # MOLECULAR INFO
-    # ------------------------------------------------
-
-    st.markdown("## Molecular Information")
-
     mol = Chem.MolFromSmiles(smiles)
 
-    info = {
-        "Formula":
-            CalcMolFormula(mol),
+    if mol is None:
 
-        "Molecular Weight":
-            round(
-                Descriptors.MolWt(mol),
-                2
-            ),
-
-        "H-Bond Donors":
-            Descriptors.NumHDonors(mol),
-
-        "H-Bond Acceptors":
-            Descriptors.NumHAcceptors(mol),
-
-        "TPSA":
-            round(
-                Descriptors.TPSA(mol),
-                2
-            ),
-
-        "Lipinski Violations":
-            violations
-    }
-
-    info_df = pd.DataFrame({
-        "Property":
-            list(info.keys()),
-
-        "Value":
-            list(info.values())
-    })
-
-    st.table(info_df)
-
-    # ------------------------------------------------
-    # PDF DOWNLOAD
-    # ------------------------------------------------
-
-    create_pdf(
-        smiles,
-        prediction_label,
-        probability,
-        toxicity_label,
-        drug_like,
-        info
-    )
-
-    with open(
-        "drug_report.pdf",
-        "rb"
-    ) as file:
-
-        st.download_button(
-            label="Download Research Report",
-
-            data=file,
-
-            file_name="drug_report.pdf",
-
-            mime="application/pdf"
-        )
-
-    # ------------------------------------------------
-    # PUBCHEM INFO
-    # ------------------------------------------------
-
-    st.markdown("## Real Drug Information")
-
-    pubchem_data = fetch_pubchem_data(smiles)
-
-    if pubchem_data:
-
-        st.write(
-            f"### Compound Name: {pubchem_data['Name']}"
-        )
-
-        st.write(
-            f"Formula: {pubchem_data['Formula']}"
-        )
-
-        st.write(
-            f"Molecular Weight: {pubchem_data['Weight']}"
+        st.error(
+            "Invalid SMILES Molecule"
         )
 
     else:
 
-        st.warning(
-            "No PubChem data found"
+        features = extract_features(smiles)
+
+        prediction = activity_model.predict(
+            [features]
+        )[0]
+
+        probability = activity_model.predict_proba(
+            [features]
+        )[0][1]
+
+        toxicity = toxicity_model.predict(
+            [features]
+        )[0]
+
+        drug_like, violations = lipinski(smiles)
+
+        if prediction == 1:
+            prediction_label = "ACTIVE"
+        else:
+            prediction_label = "INACTIVE"
+
+        if toxicity == 1:
+            toxicity_label = "HIGH"
+        else:
+            toxicity_label = "LOW"
+
+        # ----------------------------------------
+        # METRICS
+        # ----------------------------------------
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                "Prediction",
+                prediction_label
+            )
+
+        with col2:
+            st.metric(
+                "Confidence",
+                f"{probability:.2f}"
+            )
+
+        with col3:
+            st.metric(
+                "Toxicity",
+                toxicity_label
+            )
+
+        with col4:
+            st.metric(
+                "Drug-Likeness",
+                drug_like
+            )
+
+        # ----------------------------------------
+        # MOLECULAR INFO
+        # ----------------------------------------
+
+        st.markdown(
+            "## Molecular Information"
         )
 
-    # ------------------------------------------------
-    # CHART
-    # ------------------------------------------------
+        info = {
 
-    st.markdown("## Confidence Analytics")
+            "Formula":
+                CalcMolFormula(mol),
 
-    fig = go.Figure(go.Indicator(
-        mode = "gauge+number",
+            "Molecular Weight":
+                round(
+                    Descriptors.MolWt(mol),
+                    2
+                ),
 
-        value = probability * 100,
+            "H-Bond Donors":
+                Descriptors.NumHDonors(mol),
 
-        title = {
-            'text': "Confidence Score"
-        },
+            "H-Bond Acceptors":
+                Descriptors.NumHAcceptors(mol),
 
-        gauge = {
-            'axis': {
-                'range': [0,100]
-            }
+            "TPSA":
+                round(
+                    Descriptors.TPSA(mol),
+                    2
+                ),
+
+            "Lipinski Violations":
+                violations
         }
-    ))
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+        info_df = pd.DataFrame({
+            "Property":
+                list(info.keys()),
 
-    # ------------------------------------------------
-    # 3D STRUCTURE
-    # ------------------------------------------------
+            "Value":
+                list(info.values())
+        })
 
-    st.markdown("## 3D Molecular Structure")
+        st.table(info_df)
 
-    st.components.v1.html(
-        show_molecule(smiles),
-        height=550
-    )
+        # ----------------------------------------
+        # PDF REPORT
+        # ----------------------------------------
+
+        create_pdf(
+            smiles,
+            prediction_label,
+            probability,
+            toxicity_label,
+            drug_like,
+            info
+        )
+
+        with open(
+            "drug_report.pdf",
+            "rb"
+        ) as file:
+
+            st.download_button(
+                label="Download Research Report",
+                data=file,
+                file_name="drug_report.pdf",
+                mime="application/pdf"
+            )
+
+        # ----------------------------------------
+        # PUBCHEM INFO
+        # ----------------------------------------
+
+        st.markdown(
+            "## Real Drug Information"
+        )
+
+        pubchem_data = fetch_pubchem_data(
+            smiles
+        )
+
+        if pubchem_data:
+
+            st.write(
+                f"### Compound Name: {pubchem_data['Name']}"
+            )
+
+            st.write(
+                f"Formula: {pubchem_data['Formula']}"
+            )
+
+            st.write(
+                f"Molecular Weight: {pubchem_data['Weight']}"
+            )
+
+        else:
+
+            st.warning(
+                "No PubChem data found"
+            )
+
+        # ----------------------------------------
+        # CONFIDENCE ANALYTICS
+        # ----------------------------------------
+
+        st.markdown(
+            "## Confidence Analytics"
+        )
+
+        fig = go.Figure(go.Indicator(
+
+            mode = "gauge+number",
+
+            value = probability * 100,
+
+            title = {
+                'text': "Confidence Score"
+            },
+
+            gauge = {
+                'axis': {
+                    'range': [0,100]
+                }
+            }
+        ))
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+        # ----------------------------------------
+        # 3D VISUALIZATION
+        # ----------------------------------------
+
+        st.markdown(
+            "## 3D Molecular Structure"
+        )
+
+        molecule_html = show_molecule(
+            smiles
+        )
+
+        if molecule_html:
+
+            st.components.v1.html(
+                molecule_html,
+                height=550
+            )
