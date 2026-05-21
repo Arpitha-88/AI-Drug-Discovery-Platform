@@ -1,0 +1,9 @@
+streamlit
+pandas
+numpy
+scikit-learn
+rdkit
+py3Dmol
+pubchempy
+plotly
+fpdf
