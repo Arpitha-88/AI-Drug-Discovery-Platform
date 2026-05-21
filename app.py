@@ -1,3 +1,4 @@
+%%writefile app.py
 
 import streamlit as st
 
@@ -201,15 +202,6 @@ def extract_features(smiles):
         Descriptors.NumHAcceptors(mol),
         Descriptors.TPSA(mol)
     ]
-
-X = df["smiles"].apply(
-    extract_features
-).tolist()
-
-y_activity = df["activity"]
-
-y_toxicity = df["toxicity"]
-
 # ------------------------------------------------
 # TRAIN MODELS
 # ------------------------------------------------
@@ -235,6 +227,9 @@ toxicity_model.fit(X, y_toxicity)
 def show_molecule(smiles):
 
     mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+    st.error("Invalid SMILES molecule")
+    st.stop()
 
     mol = Chem.AddHs(mol)
 
@@ -274,6 +269,10 @@ def show_molecule(smiles):
 def lipinski(smiles):
 
     mol = Chem.MolFromSmiles(smiles)
+
+    # CHECK INVALID INPUT
+    if mol is None:
+        return "INVALID", 0
 
     mw = Descriptors.MolWt(mol)
 
