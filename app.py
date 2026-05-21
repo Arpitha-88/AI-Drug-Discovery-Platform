@@ -1,3 +1,5 @@
+%%writefile app.py
+
 import streamlit as st
 
 from rdkit import Chem
@@ -225,9 +227,11 @@ toxicity_model.fit(X, y_toxicity)
 def show_molecule(smiles):
 
     mol = Chem.MolFromSmiles(smiles)
+    
+
     if mol is None:
-    st.error("Invalid SMILES molecule")
-    st.stop()
+        st.error("Invalid SMILES molecule")
+        st.stop()
 
     mol = Chem.AddHs(mol)
 
